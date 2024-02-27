@@ -11,8 +11,9 @@ const db = require("./node_details/db");
 const config = require("./node_details/config")
 const port = config.port;
 const app = express();
-var CRON = require('./CRON/cron');
+var CRON = require('./CRON/cron.js');
 const ENCRYPTER = require('./helper/common.js')
+var common = require("./helper/common.js");
 
 // console.log("ENCRYPT", ENCRYPTER.encrypt("012"));
 
@@ -53,9 +54,11 @@ app.get('/emptyLogs', (req, res) => {
      })
 })
 
+// CRON()
 app.use('/api/user', require('./Routers/user.router'))
 app.use('/api/coin', require('./Routers/coin.router.js'))
 app.use('/api/admin/basic', require('./Routers/admin.router.js'))
+app.use('/api/transaction/', require('./Routers/transaction.router.js'))
 
 var httpServer = http.createServer(app);
 httpServer.listen(3501, () => {

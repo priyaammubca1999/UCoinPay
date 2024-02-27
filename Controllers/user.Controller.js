@@ -43,13 +43,11 @@ exports.registerFunction = async (req, res) => {
                 }
                 else {
                     await transporter.sendMail(mailOptions);
-                    console.log('Verification email sent');
                     return res.status(200).send({ status: true, message: 'Verification email sent to: ' + data[0].email });
                 }
             })
         }
     } catch (error) {
-        console.log('error: ', error);
         return res.status(404).send({ status: false, message: 'Something Went Wrong' });
     }
 }
@@ -78,7 +76,6 @@ exports.registerVerify = async (req, res) => {
         }
 
     } catch (err) {
-        console.log('err: ', err);
         return res.status(404).send({ status: false, message: 'Something Went Wrong' })
     }
 }
@@ -103,7 +100,6 @@ exports.loginFunction = async (req, res) => {
         }
 
     } catch (error) {
-        console.log('error: ', error);
         return res.status(404).send({ status: false, message: 'Something Went Wrong' });
 
     }
@@ -114,7 +110,6 @@ exports.userProfile = (req, res) => {
     try {
         queryHelper.findoneData("Backend", { "u_id": req.userId.u_id }, {}, async (result) => {
             if (result) {
-                console.log('result: ', result);
                 let [newAddress] = [Encrypter(result['accountDetails'].address, 'DECRYPT')]
                 return res.status(200).send({ status: true, data: { result, decryptedDetails: { address: newAddress } } });
             } else {
@@ -122,7 +117,29 @@ exports.userProfile = (req, res) => {
             }
         })
     } catch (error) {
-        console.log('error: ', error);
         return res.status(404).send({ status: false, message: 'Something Went Wrong' });
     }
+}
+
+exports.getUserLoginDetails = async (req, res) => {
+    try {
+        queryHelper.findData("Backend", {}, {}, {}, {}, (result) => {
+            res.json({ status: 200, data: result, count: result.length })
+        })
+    } catch (err) {
+        return res.json({ status: 404, message: "Something went wrong" })
+    }
+}
+
+
+exports.imageUpload = (req, res) => {
+    common.imageUpload(req.file, (uploadResult) => {
+        if (uploadResult.status) {
+            let urlSplit = uploadResult.url.split('.');
+            let fileType = urlSplit[(urlSplit.length) - 1];
+            return res.status(200).send({ status: true, url: uploadResult.url, message: "Upload Successfully" });
+        } else {
+            return res.status(404).send({ status: false, message: 'Failed' });
+        }
+    })
 }

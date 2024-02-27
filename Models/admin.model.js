@@ -7,7 +7,10 @@ const adminSchema = new mongoose.Schema({
     status: { type: Number, default: 1 },
     tfaStatus: { type: Number, default: 0 },
     tfaSecret: { type: String, default: "" },
-    date: { type: Date, default: Date.now() }
+    date: { type: Date, default: Date.now() },
+    ip: { type: String, default: "" },
+    os: { type: String, default: "" },
+    lastLoginTime: { type: Date, default: '' },
 }, { versionKey: false })
 
 adminSchema.index({ username: 1 })
