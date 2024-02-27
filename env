@@ -1,0 +1,10 @@
+NODE_MAIL_HOST = 'smtp.sendgrid.net'
+NODE_FROM_MAIL_ADDRESS = 'Nivesh@ultrapro.info'
+NODE_MAIL_PORT = 587
+NODE_MAIL_AUTH_USER = 'apikey'
+NODE_MAIL_AUTH_PASS = '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'
+NODE_JWT_SECRET_KEY = 'hkborwoidbaizhc'
+NODE_IP_API_KEY = '870e8765a0264b4bfadf73f10f2e95bfb1a597d2aa675ec195d0708b'
+NODE_COIN_GECKO_API = 'https://api.coingecko.com/api/v3/simple/price?ids=ultrapro&vs_currencies='
+NODE_ENV = "local"
+NODE_SENDGRID_API_KEY = 'https://api.sendgrid.com/v3/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'

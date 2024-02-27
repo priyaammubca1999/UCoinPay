@@ -1,0 +1,34 @@
+{
+  "name": "backendref",
+  "version": "1.0.0",
+  "description": "",
+  "main": "App.js",
+  "dependencies": {
+    "@sendgrid/mail": "^8.1.1",
+    "axios": "^1.6.7",
+    "colors": "^1.4.0",
+    "convert-csv-to-json": "^2.0.0",
+    "cors": "^2.8.5",
+    "crypto-js": "^4.2.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.2",
+    "ipdata": "^2.2.4",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^6.8.2",
+    "morgan": "^1.10.0",
+    "multichain-crypto-wallet": "^0.2.8",
+    "node-cron": "^3.0.2",
+    "node-validator": "^0.1.27",
+    "nodemailer": "^6.9.10",
+    "speakeasy": "^2.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.20"
+  },
+  "scripts": {
+    "start": "nodemon App.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}
