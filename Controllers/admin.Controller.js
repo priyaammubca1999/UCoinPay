@@ -4,8 +4,9 @@ const common = require('../helper/common');
 const queryHelper = require('../helper/query');
 const ENCRYPTER = require('../helper/crypter');
 const axios = require('axios');
-const os = require('os');
 
+const os = require('os');
+const userDB = require('../Models/user.model');
 
 exports.login = async (req, res) => {
     try {
@@ -77,6 +78,21 @@ exports.getAdminLoginData = async (req, res) => {
         })
     } catch (err) {
         return res.json({ status: 404, message: "Something went wrong" })
+    }
+}
+
+
+exports.getAllKycDetails = async (req, res) => {
+    try {
+        const result = await userDB.aggregate([
+            { $match: {} },
+            { $sort: { _id: 1 } },
+            { $project: { _id: 0, kycImage: 1 } }
+        ]).exec();
+        const filteredResult = result.filter(item => Object.keys(item).length !== 0);
+        return res.json({ status: true, data: filteredResult });
+    } catch (error) {
+        return res.json({ status: false, message: error.message });
     }
 }
 

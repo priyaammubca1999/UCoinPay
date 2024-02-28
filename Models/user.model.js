@@ -10,6 +10,8 @@ const schemaObj = {
     u_id: { type: String },
     website_url: { type: String },
     accountDetails: { type: Object },
+    kycImage: { type: Object, default: {} },
+    kycStatus: { type: Boolean, default: false },
 }
 
 const backSchema = new mongoose.Schema(schemaObj);

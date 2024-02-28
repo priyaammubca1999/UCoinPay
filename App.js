@@ -54,7 +54,7 @@ app.get('/emptyLogs', (req, res) => {
      })
 })
 
-// CRON()
+CRON()
 app.use('/api/user', require('./Routers/user.router'))
 app.use('/api/coin', require('./Routers/coin.router.js'))
 app.use('/api/admin/basic', require('./Routers/admin.router.js'))

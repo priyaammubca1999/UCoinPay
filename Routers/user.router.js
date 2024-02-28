@@ -13,5 +13,7 @@ backRouter.post('/login', backController.loginFunction);
 backRouter.post('/profileDetails', common.tokenMiddlewareAdmin, backController.userProfile);
 backRouter.post('/getAllUsers', backController.getUserLoginDetails);
 backRouter.post('/imageUpload', upload.single('image'), backController.imageUpload);
+backRouter.post('/kycUpload', common.tokenMiddlewareAdmin, backController.kycUpload);
+backRouter.get('/getKYC', common.tokenMiddlewareAdmin, backController.getKYC);
 
 module.exports = backRouter;

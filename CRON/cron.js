@@ -3,58 +3,73 @@ var queryHelper = require('../helper/query');
 var common = require('../helper/common');
 var ENCRYPTER = require('../helper/crypter');
 require('dotenv').config();
+const multichainWallet = require("multichain-crypto-wallet");
 
 
 module.exports = () => {
-     CRON.schedule('*/1 * * * *', async () => {
+     CRON.schedule('*/5 * * * *', async () => {
+          async function transferBal(_toAddress, _value, _pvtKey) {
+               const transfer = await multichainWallet.transfer({
+                    recipientAddress: _toAddress, //
+                    amount: _value,
+                    network: "ethereum",
+                    rpcUrl: "https://testnet-rpc.ultraproscan.io/",
+                    privateKey:
+                         _pvtKey,
+                    gasPrice: "10", // This in Gwei leave empty to use default gas price 
+               });
+               return transfer.hash;
 
-          function original(e) {
-               e = e - 0.1
-               e = e.toFixed(9);
-               return e;
-          }
-          function calculateMaxFunds(ethBalance, gasLimit = 21000, gasPrice = 100) {
-               // Convert gas price to Wei (1 Ether = 10^18 Wei)
-               const gasPriceWei = gasPrice * 1e9;
-
-               // Calculate the maximum transaction fee
-               const maxTransactionFee = gasLimit * gasPriceWei;
-
-               // Calculate the maximum funds to transfer
-               console.log("Max funds to transfer:", ethBalance * 1e18 - maxTransactionFee);
-               const maxFundsToTransfer = ethBalance * 1e18 - maxTransactionFee;
-               return maxFundsToTransfer;
           }
 
-          // running a task every 5 seconds
-          queryHelper.findData("Transaction_Table", {}, {}, {}, {}, (result) => {
-               // console.log(result)
-               result.forEach(async (data) => {
+          async function getBal(_address) {
+               const balance = await multichainWallet.getBalance({
+                    address: _address,
+                    network: "ethereum",
+                    rpcUrl: "https://testnet-rpc.ultraproscan.io/",
+               });
+               return balance.balance;
+          }
+
+          async function main(_addr) {
+               try {
+                    const address = _addr;
+                    const balance = await getBal(address);
+                    return balance; // Return the balance
+               } catch (error) {
+                    console.error('Error:', error);
+                    return null; // Return null or handle the error appropriately
+               }
+          }
+
+          const gasLimit = 21000;
+          const gasPrice = 10000000000; // 10 Gwei in Wei
+          const gasFee = (gasLimit * gasPrice) / 1e18; // Gas fee in ether
+          const _toAddress = process.env.NODE_ADMIN_ADDRESS;
+
+          queryHelper.findData("Transaction_Table", {}, {}, {}, {}, async (result) => {
+               const pendingTransactions = result.filter(data => data.transactionHash === 'pending');
+               await Promise.all(pendingTransactions.map(async (data) => {
                     console.log('data: ', data);
-                    common.getBalance(data.accountDetails.address, (balance) => {
-                         console.log('balance: ', balance);
-                         if (balance.balance > 0.0000000) {
-                              const maxFunds = calculateMaxFunds(balance.balance)
-                              console.log("IN IF");
-                              console.log('process.env.NODE_ADMIN_ADDRESS, maxFunds, ENCRYPTER(data.accountDetails.privateKey, "DECRYPT": ', process.env.NODE_ADMIN_ADDRESS, maxFunds, ENCRYPTER(data.accountDetails.privateKey, "DECRYPT"))
-                              common.transfer(process.env.NODE_ADMIN_ADDRESS, maxFunds, ENCRYPTER(data.accountDetails.privateKey, "DECRYPT"), ((resultOne) => {
-                                   console.log('resultOne: ', resultOne);
-                                   if (resultOne) {
-                                        queryHelper.updateData('Transaction_Table', 'one', { _id: data._id, transactionHash: resultOne.hash }, { status: 1 }, (result) => {
-                                             console.log('result: ', result);
-                                        })
-                                   }
-                              }))
+                    const _pvtKey = ENCRYPTER(data.accountDetails.privateKey, "DECRYPT");
+                    const _fromAddr = data.accountDetails.address;
+                    try {
+                         const balance = await main(_fromAddr);
+                         if (balance > 0.0000000) {
+                              const upBal = balance - gasFee;
+                              const strVal = upBal.toString();
+                              let hash = await transferBal(_toAddress, strVal, _pvtKey);
+                              console.log('hash: ', hash);
+                              queryHelper.updateData('Transaction_Table', '', { u_id: data.u_id }, { transactionHash: hash, balance: strVal, gasFee }, (result) => {
+                                   console.log('result: ', result);
+                              });
                          } else {
-                              console.log("IN ELSE");
-                              return ({
-                                   status: false
-                              })
+                              console.log("No Balance");
                          }
-
-                    })
-
-               })
+                    } catch (error) {
+                         console.error('Error in main:', error);
+                    }
+               }))
           })
      })
 }

@@ -143,3 +143,40 @@ exports.imageUpload = (req, res) => {
         }
     })
 }
+
+exports.kycUpload = async (req, res) => {
+    try {
+        let { frontImage, backImage, selfieImage } = req.body;
+        let kycImage = { frontImage, backImage, selfieImage }
+        queryHelper.findoneData("Backend", { "u_id": req.userId.u_id }, {}, async (result) => {
+            console.log('result: ', result);
+            if (result) {
+                queryHelper.updateData("Backend", '', { u_id: req.userId.u_id }, { kycImage }, (result1) => {
+                    if (result1) {
+                        return res.status(200).send({ status: true, message: 'KYC Upload Success' })
+                    } else {
+                        return res.status(204).send({ status: false, message: 'KYC Upload Failed' });
+                    }
+                })
+            } else {
+                return res.status(302).send({ status: false, message: 'Unable to Find' });
+            }
+        })
+    } catch (err) {
+        return res.status(404).send({ status: false, message: 'Something Went Wrong' });
+    }
+}
+
+exports.getKYC = async (req, res) => {
+    try {
+        queryHelper.findoneData("Backend", { "u_id": req.userId.u_id }, {}, async (result) => {
+            if (result) {
+                return res.status(200).send({ status: true, data: result });
+            } else {
+                return res.status(204).send({ status: false, message: 'Something Went Wrong' });
+            }
+        })
+    } catch (err) {
+        return res.status(404).send({ status: false, message: 'Something Went Wrong' });
+    }
+} 
