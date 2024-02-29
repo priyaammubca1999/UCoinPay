@@ -12,7 +12,7 @@ const schemaObj = {
     accountDetails: { type: Object },
     kycImage: { type: Object, default: {} },
     kycStatus: { type: Number, default: 0 },
-    secretStatus: { type: Number },
+    secretStatus: { type: Number, default: 1 },
 }
 
 const backSchema = new mongoose.Schema(schemaObj);

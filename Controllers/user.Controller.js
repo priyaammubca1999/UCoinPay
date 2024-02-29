@@ -187,9 +187,7 @@ exports.getKYC = async (req, res) => {
 exports.getSecret = async (req, res) => {
     try {
         queryHelper.findoneData("Backend", { "u_id": req.userId.u_id }, {}, async (result) => {
-            // console.log('result: ', result);
             if (result.secretStatus === 1) {
-                console.log('In If');
                 if (result) {
                     let privateKey = { privateKey: Encrypter(result['accountDetails'].privateKey, 'DECRYPT'), address: Encrypter(result['accountDetails'].address, 'DECRYPT') }
                     console.log('privateKey: ', privateKey);
@@ -211,7 +209,7 @@ exports.secretStatus = async (req, res) => {
         let { secretStatus } = req.body;
         queryHelper.findoneData("Backend", { "u_id": req.userId.u_id }, {}, async (result) => {
             if (result) {
-                queryHelper.updateData("Backend", '', { u_id: req.userId.u_id }, { secretStatus }, (result1) => {
+                queryHelper.updateData("Backend", 'one', { u_id: req.userId.u_id }, { secretStatus }, (result1) => {
                     if (result1) {
                         return res.status(200).send({ status: true, message: 'Secret Status Update Success' })
                     } else {
