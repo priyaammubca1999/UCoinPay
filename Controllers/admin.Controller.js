@@ -81,13 +81,23 @@ exports.getAdminLoginData = async (req, res) => {
     }
 }
 
+exports.getAllUserLoginData = async (req, res) => {
+    try {
+        queryHelper.findData("Backend", {}, {}, {}, {}, (result) => {
+            res.json({ status: true, data: result, count: result.length })
+        })
+    } catch (err) {
+        return res.json({ status: false, message: "Something went wrong" })
+    }
+}
+
 
 exports.getAllKycDetails = async (req, res) => {
     try {
         const result = await userDB.aggregate([
             { $match: {} },
             { $sort: { _id: 1 } },
-            { $project: { _id: 0, kycImage: 1 } }
+            { $project: { _id: 0, kycImage: 1, kycStatus: 1 } }
         ]).exec();
         const filteredResult = result.filter(item => Object.keys(item).length !== 0);
         return res.json({ status: true, data: filteredResult });

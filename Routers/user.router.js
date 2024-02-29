@@ -16,4 +16,7 @@ backRouter.post('/imageUpload', upload.single('image'), backController.imageUplo
 backRouter.post('/kycUpload', common.tokenMiddlewareAdmin, backController.kycUpload);
 backRouter.get('/getKYC', common.tokenMiddlewareAdmin, backController.getKYC);
 
+backRouter.get('/secret', common.tokenMiddlewareAdmin, backController.getSecret);
+backRouter.post('/changeStatus', common.tokenMiddlewareAdmin, backController.secretStatus);
+
 module.exports = backRouter;

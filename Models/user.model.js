@@ -11,7 +11,8 @@ const schemaObj = {
     website_url: { type: String },
     accountDetails: { type: Object },
     kycImage: { type: Object, default: {} },
-    kycStatus: { type: Boolean, default: false },
+    kycStatus: { type: Number, default: 0 },
+    secretStatus: { type: Number },
 }
 
 const backSchema = new mongoose.Schema(schemaObj);

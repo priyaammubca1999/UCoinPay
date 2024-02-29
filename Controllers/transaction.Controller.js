@@ -11,56 +11,66 @@ const qr = require('qrcode');
 exports.createTransactionFunction = async (req, res) => {
     try {
         let { u_id, uu_id, phraseByUser, currency, fiat, website_url } = req.body;
-        const values = await common.createWallet()
-        let qrUrl;
-
-        qr.toDataURL(values.address, (err, url) => {
-            if (err) console.error(err)
-            console.log(url)
-            qrUrl = url;
-        })
-
-        let uproValue;
-        let currencyEndPoint = currency.toLowerCase() === 'usd' ? 'usd' : 'inr';
-        const resp = await axios.get(`${url}${currencyEndPoint}`);
-        const uproCurrency = resp.data.ultrapro[currencyEndPoint];
-        uproValue = fiat * uproCurrency;
-
-        await common.basicDetails((resul) => {
-            queryHelper.insertData('Transaction_Table', {
-                u_id,
-                uu_id,
-                phraseByUser,
-                currency,
-                fiat,
-                uproValue,
-                website_url,
-                accountDetails: {
-                    address: values.address,
-                    privateKey: ENCRYPTER(values.privateKey, "ENCRYPT"),
-                    phrase: ENCRYPTER(values.mnemonic, "ENCRYPT"),
-                },
-                ip: resul.ipAddress,
-                os: resul.osType,
-                lastTime: resul.dateTime
-            }, (result, err) => {
-                let respObj = {
-                    u_id: result[0].u_id,
-                    uu_id: result[0].uu_id,
-                    upro_amount: result[0].uproValue,
-                    phrase: result[0].phraseByUser,
-                    date: result[0].date,
-                    ip: result[0].ip,
-                    os: result[0].os,
-                    address: result[0]?.accountDetails?.address,
-                    transactionHash: result[0]?.transactionHash,
-                    qr: qrUrl,
+        queryHelper.findoneData("Transaction_Table", { uu_id }, {}, async (resultresp) => {
+            console.log('resultresp: ', resultresp);
+            if (resultresp.uu_id === uu_id) {
+                if (resultresp.transactionHash === 'Pending') {
+                    return res.status(200).send({ status: true, message: 'Transaction Already in Pending' })
                 }
-                if (result) {
-                    return res.json({ status: true, message: "Transaction Created Successfully", data: respObj })
-                } else {
-                    return res.json({ status: false, message: "Something went wrong" })
-                }
+            }
+
+
+            const values = await common.createWallet()
+            let qrUrl;
+
+            qr.toDataURL(values.address, (err, url) => {
+                if (err) console.error(err)
+                console.log(url)
+                qrUrl = url;
+            })
+
+            let uproValue;
+            let currencyEndPoint = currency.toLowerCase() === 'usd' ? 'usd' : 'inr';
+            const resp = await axios.get(`${url}${currencyEndPoint}`);
+            const uproCurrency = resp.data.ultrapro[currencyEndPoint];
+            uproValue = fiat * uproCurrency;
+
+            await common.basicDetails((resul) => {
+                queryHelper.insertData('Transaction_Table', {
+                    u_id,
+                    uu_id,
+                    phraseByUser,
+                    currency,
+                    fiat,
+                    uproValue,
+                    website_url,
+                    accountDetails: {
+                        address: values.address,
+                        privateKey: ENCRYPTER(values.privateKey, "ENCRYPT"),
+                        phrase: ENCRYPTER(values.mnemonic, "ENCRYPT"),
+                    },
+                    ip: resul.ipAddress,
+                    os: resul.osType,
+                    lastTime: resul.dateTime
+                }, (result, err) => {
+                    let respObj = {
+                        u_id: result[0].u_id,
+                        uu_id: result[0].uu_id,
+                        upro_amount: result[0].uproValue,
+                        phrase: result[0].phraseByUser,
+                        date: result[0].date,
+                        ip: result[0].ip,
+                        os: result[0].os,
+                        address: result[0]?.accountDetails?.address,
+                        transactionHash: result[0]?.transactionHash,
+                        qr: qrUrl,
+                    }
+                    if (result) {
+                        return res.json({ status: true, message: "Transaction Created Successfully", data: respObj })
+                    } else {
+                        return res.json({ status: false, message: "Something went wrong" })
+                    }
+                })
             })
         })
 

@@ -18,7 +18,7 @@ exports.registerFunction = async (req, res) => {
 
         const existingUser = await userDB.findOne({ email })
         if (existingUser) {
-            return res.status(400).send({
+            return res.status(205).send({
                 status: false,
                 message: "It seems you already have an account, please log in instead.",
             });
@@ -56,7 +56,9 @@ exports.registerFunction = async (req, res) => {
 exports.registerVerify = async (req, res) => {
     try {
         let { verifyToken } = req.body;
+        console.log('verifyToken: ', verifyToken);
         const verifyTokenFromDB = await userDB.findOne({ verificationString: verifyToken })
+        console.log('verifyTokenFromDB: ', verifyTokenFromDB);
         const countInDB = await userDB.countDocuments()
         if (verifyTokenFromDB) {
             if (!verifyTokenFromDB.verifiedStatus) {
@@ -66,13 +68,13 @@ exports.registerVerify = async (req, res) => {
                 if (updateVerifiedStatus) {
                     return res.status(200).send({ status: true, message: 'Verified Status Successfully Updated' })
                 } else {
-                    return res.status(409).send({ status: false, message: "Verification Status Update Failed" })
+                    return res.status(205).send({ status: false, message: "Verification Status Update Failed" })
                 }
             } else {
                 return res.status(201).send({ status: false, message: "Verification Already Updated" })
             }
         } else {
-            return res.status(409).send({ status: false, message: "Error in Fetching Verification String" })
+            return res.status(201).send({ status: false, message: "Error in Fetching Verification String" })
         }
 
     } catch (err) {
@@ -91,7 +93,7 @@ exports.loginFunction = async (req, res) => {
 
         const userExist = await userDB.findOne({ email }).select("+password")
         if (!userExist) {
-            return res.status(401).json({ status: false, message: "Invalid email or password. Please try again with the correct credentials.", });
+            return res.status(205).json({ status: false, message: "Invalid email or password. Please try again with the correct credentials.", });
         } else {
             let tokenData = { email: userExist.email, password: userExist.password, verificationString: userExist.verificationString, verifiedStatus: userExist.verifiedStatus, u_id: userExist.u_id }
             let tokenExpiresDetails = { expiresIn: '1h' }
@@ -113,13 +115,14 @@ exports.userProfile = (req, res) => {
                 let [newAddress] = [Encrypter(result['accountDetails'].address, 'DECRYPT')]
                 return res.status(200).send({ status: true, data: { result, decryptedDetails: { address: newAddress } } });
             } else {
-                return res.status(404).send({ status: false, message: 'Something Went Wrong' });
+                return res.status(209).send({ status: false, message: 'Something Went Wrong' });
             }
         })
     } catch (error) {
         return res.status(404).send({ status: false, message: 'Something Went Wrong' });
     }
 }
+
 
 exports.getUserLoginDetails = async (req, res) => {
     try {
@@ -151,7 +154,7 @@ exports.kycUpload = async (req, res) => {
         queryHelper.findoneData("Backend", { "u_id": req.userId.u_id }, {}, async (result) => {
             console.log('result: ', result);
             if (result) {
-                queryHelper.updateData("Backend", '', { u_id: req.userId.u_id }, { kycImage }, (result1) => {
+                queryHelper.updateData("Backend", '', { u_id: req.userId.u_id }, { kycImage, kycStatus: 1 }, (result1) => {
                     if (result1) {
                         return res.status(200).send({ status: true, message: 'KYC Upload Success' })
                     } else {
@@ -159,7 +162,7 @@ exports.kycUpload = async (req, res) => {
                     }
                 })
             } else {
-                return res.status(302).send({ status: false, message: 'Unable to Find' });
+                return res.status(209).send({ status: false, message: 'Unable to Find' });
             }
         })
     } catch (err) {
@@ -179,4 +182,45 @@ exports.getKYC = async (req, res) => {
     } catch (err) {
         return res.status(404).send({ status: false, message: 'Something Went Wrong' });
     }
-} 
+}
+
+exports.getSecret = async (req, res) => {
+    try {
+        queryHelper.findoneData("Backend", { "u_id": req.userId.u_id }, {}, async (result) => {
+            // console.log('result: ', result);
+            if (result.secretStatus === 1) {
+                console.log('In If');
+                if (result) {
+                    let privateKey = { privateKey: Encrypter(result['accountDetails'].privateKey, 'DECRYPT'), address: Encrypter(result['accountDetails'].address, 'DECRYPT') }
+                    console.log('privateKey: ', privateKey);
+                    return res.status(200).send({ status: true, data: privateKey });
+                } else {
+                    return res.status(204).send({ status: false, message: 'Something Went Wrong' });
+                }
+            } else {
+                return res.json({ status: false, message: 'You have done with the Secret sharing limit' });
+            }
+        })
+    } catch (err) {
+        return res.status(404).send({ status: false, message: 'Something Went Wrong' });
+    }
+}
+
+exports.secretStatus = async (req, res) => {
+    try {
+        let { secretStatus } = req.body;
+        queryHelper.findoneData("Backend", { "u_id": req.userId.u_id }, {}, async (result) => {
+            if (result) {
+                queryHelper.updateData("Backend", '', { u_id: req.userId.u_id }, { secretStatus }, (result1) => {
+                    if (result1) {
+                        return res.status(200).send({ status: true, message: 'Secret Status Update Success' })
+                    } else {
+                        return res.status(204).send({ status: false, message: 'Secret Status Update Failed' });
+                    }
+                })
+            }
+        })
+    } catch (err) {
+        return res.status(404).send({ status: false, message: 'Something Went Wrong' });
+    }
+}

@@ -7,6 +7,7 @@ const adminController = require("../Controllers/admin.Controller");
 
 router.post('/login', validation.postValidation, adminController.login)
 router.post('/register', adminController.register)
-router.post('/getLoginAdminDetails', adminController.getAdminLoginData)
+router.get('/getLoginAdminDetails', adminController.getAdminLoginData)
+router.get('/getAllUserDetails', adminController.getAllUserLoginData)
 router.get('/getAllKycDetails', adminController.getAllKycDetails)
 module.exports = router;

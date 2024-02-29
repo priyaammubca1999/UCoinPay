@@ -47,7 +47,7 @@ exports.tokenMiddlewareAdmin = (req, res, next) => {
                res.json({ "status": false, "message": "Token is Required" })
           }
      } else {
-          res.json({ "status": false, "message": "Unauthorized" })
+          res.json({ "status": false, "message": "Unauthorized", code: 700 })
      }
 }
 
