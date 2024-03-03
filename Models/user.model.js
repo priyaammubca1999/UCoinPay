@@ -9,10 +9,14 @@ const schemaObj = {
     verifiedStatus: { type: Boolean },
     u_id: { type: String },
     website_url: { type: String },
-    accountDetails: { type: Object },
     kycImage: { type: Object, default: {} },
     kycStatus: { type: Number, default: 0 },
     secretStatus: { type: Number, default: 1 },
+    profileImage: { type: String, default: '' },
+    address: { type: String, default: '' },
+    loginAttempts: { type: Number, default: 0 },
+    loginBlockTime: { type: Date, default: '' },
+    randomString: { type: String, default: '' },
 }
 
 const backSchema = new mongoose.Schema(schemaObj);

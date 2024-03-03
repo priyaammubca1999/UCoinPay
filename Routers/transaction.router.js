@@ -8,5 +8,5 @@ const common = require('../helper/common');
 
 router.post('/createTransaction', transactionController.createTransactionFunction)
 router.get('/getDetailsFromTokenTransaction', common.tokenMiddlewareAdmin, transactionController.getTransactionDetailsFromToken)
-
+router.post('/balanceCheck', common.tokenMiddlewareAdmin, transactionController.balanceCheckFunction)
 module.exports = router;

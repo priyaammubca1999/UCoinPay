@@ -56,19 +56,20 @@ exports.registerFunction = async (req, res) => {
 exports.registerVerify = async (req, res) => {
     try {
         let { verifyToken } = req.body;
-        console.log('verifyToken: ', verifyToken);
         const verifyTokenFromDB = await userDB.findOne({ verificationString: verifyToken })
-        console.log('verifyTokenFromDB: ', verifyTokenFromDB);
         const countInDB = await userDB.countDocuments()
         if (verifyTokenFromDB) {
             if (!verifyTokenFromDB.verifiedStatus) {
-                const values = await common.createWallet()
+                async function generateString() {
+                    return crypto.randomBytes(20).toString('hex');
+                }
+                const randomString = await generateString();
                 const userId = await common.generateId('UPRO', countInDB)
-                let updateVerifiedStatus = await userDB.findOneAndUpdate({ verificationString: verifyTokenFromDB.verificationString }, { verifiedStatus: true, accountDetails: { address: Encrypter(values.address, 'ENCRYPT'), privateKey: Encrypter(values.privateKey, 'ENCRYPT'), phrase: Encrypter(values.mnemonic, 'ENCRYPT') }, u_id: userId })
+                let updateVerifiedStatus = await userDB.findOneAndUpdate({ verificationString: verifyTokenFromDB.verificationString, }, { verifiedStatus: true, u_id: userId, randomString: Encrypter(randomString, "ENCRYPT") })
                 if (updateVerifiedStatus) {
                     return res.status(200).send({ status: true, message: 'Verified Status Successfully Updated' })
                 } else {
-                    return res.status(205).send({ status: false, message: "Verification Status Update Failed" })
+                    return res.status(201).send({ status: false, message: "Verification Status Update Failed" })
                 }
             } else {
                 return res.status(201).send({ status: false, message: "Verification Already Updated" })
@@ -92,13 +93,31 @@ exports.loginFunction = async (req, res) => {
         ip = ip[0].toString()
 
         const userExist = await userDB.findOne({ email }).select("+password")
-        if (!userExist) {
-            return res.status(205).json({ status: false, message: "Invalid email or password. Please try again with the correct credentials.", });
+        console.log('userExist: ', userExist);
+        if (userExist.password === password) {
+            if (!userExist) {
+                return res.status(202).send({ status: false, message: "No Account Found", });
+            } else {
+                let tokenData = { email: userExist.email, password: userExist.password, verificationString: userExist.verificationString, verifiedStatus: userExist.verifiedStatus, u_id: userExist.u_id }
+                let tokenExpiresDetails = { expiresIn: '1h' }
+                let token = jwt.sign(tokenData, process.env.NODE_JWT_SECRET_KEY, tokenExpiresDetails)
+                return res.status(200).send({ status: true, message: "Login Successfully", data: token })
+            }
         } else {
-            let tokenData = { email: userExist.email, password: userExist.password, verificationString: userExist.verificationString, verifiedStatus: userExist.verifiedStatus, u_id: userExist.u_id }
-            let tokenExpiresDetails = { expiresIn: '1h' }
-            let token = jwt.sign(tokenData, process.env.NODE_JWT_SECRET_KEY, tokenExpiresDetails)
-            return res.status(200).send({ status: true, message: "Login Successfully", data: token })
+            queryHelper.findoneData("Backend", { "email": email }, {}, async (result) => {
+                console.log('result: ', result);
+                if (result.loginAttempts <= 5) {
+                    queryHelper.updateData("Backend", 'one', { email }, { loginAttempts: result.loginAttempts + 1, loginBlockTime: Date.now() }, (result1) => {
+                        console.log('result1: ', result1);
+                        if (result1) {
+                            return res.status(203).send({ status: false, message: "Invalid email or password. Please try again with the correct credentials.", });
+                        }
+                    })
+                } else {
+                    return res.status(203).send({ status: false, message: "Too many failed login attempts. Please try again later. After 60 Minutes" });
+                }
+
+            })
         }
 
     } catch (error) {
@@ -112,8 +131,7 @@ exports.userProfile = (req, res) => {
     try {
         queryHelper.findoneData("Backend", { "u_id": req.userId.u_id }, {}, async (result) => {
             if (result) {
-                let [newAddress] = [Encrypter(result['accountDetails'].address, 'DECRYPT')]
-                return res.status(200).send({ status: true, data: { result, decryptedDetails: { address: newAddress } } });
+                return res.status(200).send({ status: true, data: { result } });
             } else {
                 return res.status(209).send({ status: false, message: 'Something Went Wrong' });
             }
@@ -154,7 +172,7 @@ exports.kycUpload = async (req, res) => {
         queryHelper.findoneData("Backend", { "u_id": req.userId.u_id }, {}, async (result) => {
             console.log('result: ', result);
             if (result) {
-                queryHelper.updateData("Backend", '', { u_id: req.userId.u_id }, { kycImage, kycStatus: 1 }, (result1) => {
+                queryHelper.updateData("Backend", 'one', { u_id: req.userId.u_id }, { kycImage, kycStatus: 1 }, (result1) => {
                     if (result1) {
                         return res.status(200).send({ status: true, message: 'KYC Upload Success' })
                     } else {
@@ -189,9 +207,7 @@ exports.getSecret = async (req, res) => {
         queryHelper.findoneData("Backend", { "u_id": req.userId.u_id }, {}, async (result) => {
             if (result.secretStatus === 1) {
                 if (result) {
-                    let privateKey = { privateKey: Encrypter(result['accountDetails'].privateKey, 'DECRYPT'), address: Encrypter(result['accountDetails'].address, 'DECRYPT') }
-                    console.log('privateKey: ', privateKey);
-                    return res.status(200).send({ status: true, data: privateKey });
+                    return res.status(200).send({ status: true, data:result.randomString });
                 } else {
                     return res.status(204).send({ status: false, message: 'Something Went Wrong' });
                 }
@@ -222,3 +238,130 @@ exports.secretStatus = async (req, res) => {
         return res.status(404).send({ status: false, message: 'Something Went Wrong' });
     }
 }
+exports.updateProfile = (req, res) => {
+    try {
+        let { profileImage, address } = req.body;
+        queryHelper.findoneData("Backend", { "u_id": req.userId.u_id }, {}, async (result) => {
+            if (result) {
+                queryHelper.updateData("Backend", '', { u_id: req.userId.u_id }, { profileImage, address }, (result1) => {
+                    if (result1) {
+                        return res.status(200).send({ status: true, message: 'Profile Update Success' })
+                    } else {
+                        return res.status(204).send({ status: false, message: 'Profile Update Failed' });
+                    }
+                })
+            } else {
+                return res.status(204).send({ status: false, message: 'Unable to Find' });
+            }
+        })
+    } catch (error) {
+        return res.status(404).send({ status: false, message: 'Something Went Wrong' });
+    }
+}
+
+exports.forgotPassFunction = async (req, res) => {
+    try {
+        let { email } = req.body;
+        const emailExist = await userDB.findOne({ email });
+        if (emailExist) {
+            function generateVerificationToken() {
+                return crypto.randomBytes(20).toString('hex');
+            }
+            const verificationToken = generateVerificationToken();
+
+            const mailOptions = {
+                from: process.env.NODE_FROM_MAIL_ADDRESS,
+                to: email,
+                subject: 'Please verify your email address to Reset Password',
+                text: `Hello ${emailExist?.username},\n\nPlease click on the following link to verify your email address:\n\nhttp://localhost:4200/auth/reset/${verificationToken}`
+            }
+
+            queryHelper.updateData("Backend", 'one', { email }, { verificationString: verificationToken, verifiedStatus: false }, (result) => {
+                if (result) {
+                    transporter.sendMail(mailOptions, (error, info) => {
+                        if (error) {
+                            return res.status(203).send({ status: false, message: 'Error in Sending Email' });
+                        } else {
+                            return res.status(200).send({ status: true, message: 'Reset Password Email Sent' });
+                        }
+                    })
+                } else {
+                    return res.status(203).send({ status: false, message: 'Error in Updating Status' });
+                }
+            });
+        } else {
+            return res.status(203).send({ status: false, message: "Email Not Found" })
+        }
+    } catch (error) {
+        return res.status(404).send({ status: false, message: 'Something Went Wrong' });
+    }
+}
+
+exports.forgotVerify = async (req, res) => {
+    try {
+        let { verifyToken } = req.body;
+        const verifyTokenFromDB = await userDB.findOne({ verificationString: verifyToken });
+        if (verifyTokenFromDB) {
+            if (!verifyTokenFromDB.verifiedStatus) {
+                let updateVerifiedStatus = await userDB.findOneAndUpdate({ verificationString: verifyTokenFromDB.verificationString }, { verifiedStatus: true })
+                if (updateVerifiedStatus) {
+                    return res.status(200).send({ status: true, message: 'Verified Status Successfully Updated' })
+                } else {
+                    return res.status(205).send({ status: false, message: "Verification Status Update Failed" })
+                }
+            } else {
+                return res.status(201).send({ status: false, message: "Verification Already Updated" })
+            }
+        } else {
+            return res.status(201).send({ status: false, message: "Error in Fetching Verification String" })
+        }
+    } catch (err) {
+        return res.status(404).send({ status: false, message: 'Something Went Wrong' });
+    }
+}
+
+exports.resetPassword = async (req, res) => {
+    try {
+        let { password, confirmPassword, verificationString } = req.body;
+        queryHelper.findoneData("Backend", { "verificationString": verificationString }, {}, async (result) => {
+            if (result) {
+                if (result.verifiedStatus == false) {
+                    return res.status(201).send({ status: false, message: 'Please Verify Your Email First' })
+                } else {
+                    queryHelper.updateData('Backend', '', { verificationString: verificationString }, { password, confirmPassword, }, (result1) => {
+                        if (result1) {
+                            return res.status(200).send({ status: true, message: 'Password Reset Success' })
+                        } else {
+                            return res.status(201).send({ status: false, message: 'Password Reset Failed' });
+                        }
+                    })
+                }
+            } else {
+                return res.status(201).send({ status: false, message: 'Unable to Find your details' });
+            }
+        })
+
+
+    } catch (error) {
+        return res.status(404).send({ status: false, message: 'Something Went Wrong' });
+    }
+}
+
+exports.mailSubscription = async (req, res) => {
+    try {
+        let { email } = req.body;
+        queryHelper.insertData("Subscription", { email }, (result) => {
+            console.log('result: ', result);
+            if (result) {
+                return res.status(200).send({ status: true, message: 'Subscription Success' })
+            } else {
+                return res.status(201).send({ status: false, message: 'Subscription Failed' });
+            }
+        })
+
+    } catch (error) {
+        return res.status(404).send({ status: false, message: 'Something Went Wrong' });
+    }
+}
+
+

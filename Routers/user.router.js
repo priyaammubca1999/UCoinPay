@@ -18,5 +18,12 @@ backRouter.get('/getKYC', common.tokenMiddlewareAdmin, backController.getKYC);
 
 backRouter.get('/secret', common.tokenMiddlewareAdmin, backController.getSecret);
 backRouter.post('/changeStatus', common.tokenMiddlewareAdmin, backController.secretStatus);
+backRouter.post('/updateProfile', common.tokenMiddlewareAdmin, backController.updateProfile);
 
+backRouter.post('/forgotPassword', backController.forgotPassFunction);
+backRouter.post('/forgotVerify', backController.forgotVerify);
+backRouter.post('/resetPassword', backController.resetPassword);
+
+
+backRouter.post('/subscribeApi', backController.mailSubscription);
 module.exports = backRouter;

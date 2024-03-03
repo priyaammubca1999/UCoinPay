@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const transactionTableSchema = new mongoose.Schema({
     u_id: { type: String, default: "" },
-    uu_id: { type: String, default: "" },
+    yc_u_id: { type: String, default: "" },
     upro_amount: { type: String, default: "" },
     phraseByUser: { type: String, default: '' },
     currency: { type: String, default: '' },

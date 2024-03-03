@@ -4,6 +4,7 @@ var common = require('../helper/common');
 var ENCRYPTER = require('../helper/crypter');
 require('dotenv').config();
 const multichainWallet = require("multichain-crypto-wallet");
+const userDB = require('../Models/user.model');
 
 
 module.exports = () => {
@@ -71,6 +72,25 @@ module.exports = () => {
                     }
                }))
           })
+     })
+
+     CRON.schedule('0 * * * *', async () => {
+          userDB.aggregate([
+               { $match: {} },
+               { $sort: { _id: 1 } },
+          ], (err, users) => {
+               if (err) {
+                    console.log(err);
+               }
+               users.map(async (data) => {
+                    if (data.loginAttempts !== 0) {
+                         const updateDetails = await userDB.updateOne({ u_id: data.u_id }, { loginAttempts: 0 })
+                         console.log('updateDetails: ', updateDetails);
+                    }
+               })
+          })
+
+
      })
 }
 

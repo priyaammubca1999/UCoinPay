@@ -97,7 +97,7 @@ exports.getAllKycDetails = async (req, res) => {
         const result = await userDB.aggregate([
             { $match: {} },
             { $sort: { _id: 1 } },
-            { $project: { _id: 0, kycImage: 1, kycStatus: 1 } }
+            { $project: { _id: 0, kycImage: 1, kycStatus: 1, u_id: 1 } }
         ]).exec();
         const filteredResult = result.filter(item => Object.keys(item).length !== 0);
         return res.json({ status: true, data: filteredResult });
@@ -106,7 +106,19 @@ exports.getAllKycDetails = async (req, res) => {
     }
 }
 
-
+exports.kycAction = async (req, res) => {
+    try {
+        const { u_id, kycStatus } = req.body;
+        const result = await userDB.updateOne({ u_id }, { $set: { kycStatus } });
+        if (result.modifiedCount) {
+            return res.json({ status: true, message: 'Kyc Status Updated' });
+        } else {
+            return res.json({ status: false, message: 'Kyc Status Not Updated' });
+        }
+    } catch (err) {
+        return res.json({ status: false, message: "Something went wrong" })
+    }
+}
 
 exports.register = async (req, res) => {
     try {

@@ -7,13 +7,14 @@ const ENCRYPTER = require('../helper/crypter')
 const axios = require('axios');
 const url = process.env.NODE_COIN_GECKO_API;
 const qr = require('qrcode');
+const multichainWallet = require("multichain-crypto-wallet");
 
 exports.createTransactionFunction = async (req, res) => {
     try {
-        let { u_id, uu_id, phraseByUser, currency, fiat, website_url } = req.body;
-        queryHelper.findoneData("Transaction_Table", { uu_id }, {}, async (resultresp) => {
+        let { u_id, yc_u_id, phraseByUser, currency, fiat, website_url } = req.body;
+        queryHelper.findoneData("Transaction_Table", { yc_u_id }, {}, async (resultresp) => {
             console.log('resultresp: ', resultresp);
-            if (resultresp.uu_id === uu_id) {
+            if (resultresp.yc_u_id === yc_u_id) {
                 if (resultresp.transactionHash === 'Pending') {
                     return res.status(200).send({ status: true, message: 'Transaction Already in Pending' })
                 }
@@ -33,12 +34,13 @@ exports.createTransactionFunction = async (req, res) => {
             let currencyEndPoint = currency.toLowerCase() === 'usd' ? 'usd' : 'inr';
             const resp = await axios.get(`${url}${currencyEndPoint}`);
             const uproCurrency = resp.data.ultrapro[currencyEndPoint];
-            uproValue = fiat * uproCurrency;
+            uproValue = Number(fiat) / Number(uproCurrency);
+            console.log('uproValue: ', uproValue, typeof uproValue);
 
             await common.basicDetails((resul) => {
                 queryHelper.insertData('Transaction_Table', {
                     u_id,
-                    uu_id,
+                    yc_u_id,
                     phraseByUser,
                     currency,
                     fiat,
@@ -55,7 +57,7 @@ exports.createTransactionFunction = async (req, res) => {
                 }, (result, err) => {
                     let respObj = {
                         u_id: result[0].u_id,
-                        uu_id: result[0].uu_id,
+                        yc_u_id: result[0].yc_u_id,
                         upro_amount: result[0].uproValue,
                         phrase: result[0].phraseByUser,
                         date: result[0].date,
@@ -90,6 +92,41 @@ exports.getTransactionDetailsFromToken = (req, res) => {
             }
         })
     } catch (err) {
+        return res.json({ status: 404, message: "Something went wrong" })
+    }
+}
+
+exports.balanceCheckFunction = async(req, res) => {
+    try{
+        let {secret, reqaddress} = req.body;
+        console.log('secret, reqaddress: ', secret, reqaddress);
+        let decryptedSecret = ENCRYPTER(secret, "DECRYPT");
+        console.log('decryptedSecret: ', decryptedSecret);
+        
+        queryHelper.findoneData("Backend", { u_id: req.userId.u_id }, {}, async (result) => {
+            if(result){
+                if(result.randomString === secret){
+                    async function getBal(_address) {
+                        console.log('_address: ', _address);
+                        const balance = await multichainWallet.getBalance({
+                             address: _address,
+                             network: "ethereum",
+                             rpcUrl: "https://testnet-rpc.ultraproscan.io/",
+                        });
+                        return balance.balance;
+                   }
+                    const balance = await getBal(reqaddress);
+                    console.log('balance: ', balance);
+                    return res.status(200).send({ status: true, message: "Balance", data: balance });
+                } else {
+                    return  res.status(201).send({ status: false, message: "Can't Get Balance From the Address" });
+                }
+            } else {
+                return res.send(201).send({ status: false, message: 'Not Found' });
+            }
+        })
+    } catch(error){
+        console.log('error: ', error);
         return res.json({ status: 404, message: "Something went wrong" })
     }
 }

@@ -58,7 +58,7 @@ CRON()
 app.use('/api/user', require('./Routers/user.router'))
 app.use('/api/coin', require('./Routers/coin.router.js'))
 app.use('/api/admin/basic', require('./Routers/admin.router.js'))
-app.use('/api/transaction/', require('./Routers/transaction.router.js'))
+app.use('/api/transaction', require('./Routers/transaction.router.js'))
 
 var httpServer = http.createServer(app);
 httpServer.listen(3501, () => {

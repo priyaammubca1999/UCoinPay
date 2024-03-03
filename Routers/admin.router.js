@@ -10,4 +10,5 @@ router.post('/register', adminController.register)
 router.get('/getLoginAdminDetails', adminController.getAdminLoginData)
 router.get('/getAllUserDetails', adminController.getAllUserLoginData)
 router.get('/getAllKycDetails', adminController.getAllKycDetails)
+router.post('/kycChangeStatus', adminController.kycAction)
 module.exports = router;
