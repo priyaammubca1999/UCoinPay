@@ -24,6 +24,8 @@ backRouter.post('/forgotPassword', backController.forgotPassFunction);
 backRouter.post('/forgotVerify', backController.forgotVerify);
 backRouter.post('/resetPassword', backController.resetPassword);
 
+backRouter.post('/tfaChangeStatus', common.tokenMiddlewareAdmin, backController.tfaChangeStatus);
+backRouter.post('/loginWithTfa', backController.loginWithTfa);
 
 backRouter.post('/subscribeApi', backController.mailSubscription);
 module.exports = backRouter;

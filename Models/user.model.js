@@ -17,6 +17,8 @@ const schemaObj = {
     loginAttempts: { type: Number, default: 0 },
     loginBlockTime: { type: Date, default: '' },
     randomString: { type: String, default: '' },
+    tfaStatus: { type: Boolean, default: false },
+    tfaSecret: { type: String, default: '' },
 }
 
 const backSchema = new mongoose.Schema(schemaObj);

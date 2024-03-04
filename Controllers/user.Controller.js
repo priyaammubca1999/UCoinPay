@@ -8,6 +8,7 @@ var userLoginDB = require("../Models/userLogin.model")
 var queryHelper = require('../helper/query');
 const mongoose = require('mongoose');
 var Encrypter = require('../helper/crypter');
+const {randomInt} = require("crypto");
 
 require('dotenv').config();
 
@@ -18,7 +19,7 @@ exports.registerFunction = async (req, res) => {
 
         const existingUser = await userDB.findOne({ email })
         if (existingUser) {
-            return res.status(205).send({
+            return res.status(200).send({
                 status: false,
                 message: "It seems you already have an account, please log in instead.",
             });
@@ -94,35 +95,98 @@ exports.loginFunction = async (req, res) => {
 
         const userExist = await userDB.findOne({ email }).select("+password")
         console.log('userExist: ', userExist);
-        if (userExist.password === password) {
-            if (!userExist) {
-                return res.status(202).send({ status: false, message: "No Account Found", });
+        if(!userExist.tfaStatus){
+            if (userExist.password === password) {
+                if (!userExist) {
+                    return res.status(202).send({ status: false, message: "No Account Found", });
+                } else {
+                    let tokenData = { email: userExist.email, password: userExist.password, verificationString: userExist.verificationString, verifiedStatus: userExist.verifiedStatus, u_id: userExist.u_id }
+                    let tokenExpiresDetails = { expiresIn: '1h' }
+                    let token = jwt.sign(tokenData, process.env.NODE_JWT_SECRET_KEY, tokenExpiresDetails)
+                    return res.status(200).send({ status: true, message: "Login Successfully", data: token })
+                }
             } else {
-                let tokenData = { email: userExist.email, password: userExist.password, verificationString: userExist.verificationString, verifiedStatus: userExist.verifiedStatus, u_id: userExist.u_id }
-                let tokenExpiresDetails = { expiresIn: '1h' }
-                let token = jwt.sign(tokenData, process.env.NODE_JWT_SECRET_KEY, tokenExpiresDetails)
-                return res.status(200).send({ status: true, message: "Login Successfully", data: token })
+                queryHelper.findoneData("Backend", { "email": email }, {}, async (result) => {
+                    console.log('result: ', result);
+                    if (result.loginAttempts <= 5) {
+                        queryHelper.updateData("Backend", 'one', { email }, { loginAttempts: result.loginAttempts + 1, loginBlockTime: Date.now() }, (result1) => {
+                            console.log('result1: ', result1);
+                            if (result1) {
+                                return res.status(203).send({ status: false, message: "Invalid email or password. Please try again with the correct credentials.", });
+                            }
+                        })
+                    } else {
+                        return res.status(203).send({ status: false, message: "Too many failed login attempts. Please try again later. After 60 Minutes" });
+                    }
+    
+                })
             }
         } else {
-            queryHelper.findoneData("Backend", { "email": email }, {}, async (result) => {
-                console.log('result: ', result);
-                if (result.loginAttempts <= 5) {
-                    queryHelper.updateData("Backend", 'one', { email }, { loginAttempts: result.loginAttempts + 1, loginBlockTime: Date.now() }, (result1) => {
-                        console.log('result1: ', result1);
-                        if (result1) {
-                            return res.status(203).send({ status: false, message: "Invalid email or password. Please try again with the correct credentials.", });
-                        }
-                    })
-                } else {
-                    return res.status(203).send({ status: false, message: "Too many failed login attempts. Please try again later. After 60 Minutes" });
-                }
+            var otp = randomInt(100000, 1000000)
+            console.log('otp: ', otp);
 
-            })
+            const mailOptions = {
+                from: process.env.NODE_FROM_MAIL_ADDRESS,
+                to: email,
+                subject: 'Please verify your email address',
+                html: "<h3>OTP for account verification is </h3>"  + "<h1 style='font-weight:bold;'>" + otp +"</h1>" 
+            };
+            if (userExist.password === password) {
+                if (!userExist) {
+                    return res.status(202).send({ status: false, message: "No Account Found", });
+                } else {
+                    await transporter.sendMail(mailOptions);
+                    queryHelper.updateData("Backend", 'one', { email }, { tfaSecret:otp, loginAttempts: 0 }, (result) => {
+                        console.log('result: ', result);
+                        if(result){
+                            return res.status(200).send({ status: true, message: "We have sent an OTP to your email, Kindly Check and share that OTP.", })
+                        } else {
+                            return res.status(200).send({ status: false, message: "Error in Sending Email" });
+                        }              
+                    })
+                  
+                }
+            } else {
+                queryHelper.findoneData("Backend", { "email": email }, {}, async (result) => {
+                    console.log('result: ', result);
+                    if (result.loginAttempts <= 5) {
+                        queryHelper.updateData("Backend", 'one', { email }, { loginAttempts: result.loginAttempts + 1, loginBlockTime: Date.now() }, (result1) => {
+                            console.log('result1: ', result1);
+                            if (result1) {
+                                return res.status(203).send({ status: false, message: "Invalid email or password. Please try again with the correct credentials.", });
+                            }
+                        })
+                    } else {
+                        return res.status(203).send({ status: false, message: "Too many failed login attempts. Please try again later. After 60 Minutes" });
+                    }
+
+                })
+            }
         }
+        
 
     } catch (error) {
         return res.status(404).send({ status: false, message: 'Something Went Wrong' });
 
+    }
+}
+
+exports.loginWithTfa = async(req,res) => {
+    try {
+        let { email, password, otp } = req.body;
+        console.log('email, password, otp: ', email, password, otp);
+        const userExist = await userDB.findOne({ email }).select("+password")
+        console.log('userExist: ', userExist);
+        if(userExist.tfaSecret === otp){
+            let tokenData = { email: userExist.email, password: userExist.password, verificationString: userExist.verificationString, verifiedStatus: userExist.verifiedStatus, u_id: userExist.u_id }
+            let tokenExpiresDetails = { expiresIn: '1h' }
+            let token = jwt.sign(tokenData, process.env.NODE_JWT_SECRET_KEY, tokenExpiresDetails)
+            return res.status(200).send({ status: true, message: "Login Successfully", data: token })
+        } else {
+            return res.status(200).send({ status: false, message: "Invalid OTP" });
+        }
+    } catch (error) {
+        return res.status(404).send({ status: false, message: 'Something Went Wrong' });
     }
 }
 
@@ -364,4 +428,17 @@ exports.mailSubscription = async (req, res) => {
     }
 }
 
-
+exports.tfaChangeStatus = async (req, res) => {
+    try {
+        let { status } = req.body;
+        queryHelper.updateData('Backend', 'one', { u_id: req.userId.u_id }, { tfaStatus: status }, (result) => {
+            if (result) {
+                return res.status(200).send({ status: true, message: 'TFA Status Updated' })
+            } else {
+                return res.status(200).send({ status: false, message: 'TFA Status Update Failed' });
+            }
+        })
+    } catch (error) {
+        return res.status(404).send({ status: false, message: 'Something Went Wrong' });
+    }
+}
