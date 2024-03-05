@@ -11,3 +11,12 @@ export const useAdminLogin = () => {
     });
 };
 
+export const kycAction = (data) => {
+    return axios.post('admin/basic/kycChangeStatus', { ...data });
+}
+
+export const useKycAction = () => {
+    return useMutation(kycAction, {
+        onSuccess: (kycActionData) => { }
+    });
+}

@@ -10,11 +10,13 @@ import { Box, Stack, Table, TableBody, TableCell, TableContainer, TableHead, Tab
 // project import
 import Dot from 'components/@extended/Dot';
 import { useFetchUserKyc } from '../../React-Query/get';
+import { useNavigate } from 'react-router-dom'
+import { toast } from 'react-hot-toast';
 
 const headCells = [
     {
         id: 'KycStatus',
-        align: 'right',
+        align: 'left',
         disablePadding: false,
         label: 'Kyc Status'
     },
@@ -35,6 +37,12 @@ const headCells = [
         align: 'left',
         disablePadding: false,
         label: 'Selfie Image'
+    },
+    {
+        id: 'u_id',
+        align: 'left',
+        disablePadding: false,
+        label: 'U ID'
     }
 ];
 
@@ -57,7 +65,7 @@ const KycStatus = ({ status }) => {
             break;
         default:
             color = 'primary';
-            title = 'None';
+            title = 'Not Uploaded';
     }
 
     return (
@@ -99,9 +107,9 @@ export default function KycTable() {
     const [order] = useState('asc');
     const [orderBy] = useState('trackingNo');
     const [selected] = useState([]);
+    const navigate = useNavigate();
 
     const { data: kycTableData } = useFetchUserKyc('kyc-table');
-    console.log('kycTableData: ', kycTableData);
 
     const isSelected = (trackingNo) => selected.indexOf(trackingNo) !== -1;
 
@@ -142,19 +150,44 @@ export default function KycTable() {
                                     tabIndex={-1}
                                     key={index}
                                     selected={isItemSelected}
+                                    style={{ cursor: 'pointer' }}
                                 >
-                                    <TableCell align="left">
+                                    <TableCell align="left" onClick={() => { row.kycStatus === 0 ? toast.error('Not Upload any Image') : navigate('/dashboard/kycDetail', { state: { data: row } }) }}>
                                         <KycStatus status={row.kycStatus} />
                                     </TableCell>
-                                    <TableCell align="left">
-                                        <img src={row?.kycImage?.frontImage} style={{ width: '100px', height: '100px' }} alt="frontImage" key={index} />
-                                    </TableCell>
-                                    <TableCell align="left">
-                                        <img src={row?.kycImage?.backImage} style={{ width: '100px', height: '100px' }} alt="backImage" key={index} />
-                                    </TableCell>
-                                    <TableCell align="left">
-                                        <img src={row?.kycImage?.selfieImage} style={{ width: '100px', height: '100px' }} alt="selfieImage" key={index} />
-                                    </TableCell>
+                                    {row.kycStatus !== 0 ? (
+                                        <TableCell align="left">
+                                            <img src={row?.kycImage?.frontImage} style={{ width: '100px', height: '100px' }} alt="frontImage" key={index} />
+                                        </TableCell>
+                                    ) : (
+                                        <TableCell align="left">
+                                            <Typography color="secondary"> -- </Typography>
+                                        </TableCell>
+                                    )}
+                                    {row.kycStatus !== 0 ? (
+                                        <TableCell align="left">
+                                            <img src={row?.kycImage?.backImage} style={{ width: '100px', height: '100px' }} alt="backImage" key={index} />
+                                        </TableCell>
+                                    ) : (
+                                        <TableCell align="left">
+                                            <Typography color="secondary"> -- </Typography>
+                                        </TableCell>
+                                    )}
+                                    {row.kycStatus !== 0 ? (
+                                        <TableCell align="left">
+                                            <img src={row?.kycImage?.selfieImage} style={{ width: '100px', height: '100px' }} alt="selfieImage" key={index} />
+                                        </TableCell>
+                                    ) : (
+                                        <TableCell align="left">
+                                            <Typography color="secondary"> -- </Typography>
+                                        </TableCell>
+                                    )}
+                                    {
+                                        <TableCell align="left">
+                                            <Typography color="secondary"> {row.u_id} </Typography>
+                                        </TableCell>
+                                    }
+
                                     {/* <TableCell component="th" scope="row" align="left">
                                         <Typography color="secondary"> {row.email} </Typography>
                                     </TableCell>

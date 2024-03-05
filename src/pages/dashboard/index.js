@@ -151,7 +151,7 @@ const DashboardDefault = () => {
       <Grid item xs={12} md={12} lg={12}>
         <Grid container alignItems="center" justifyContent="space-between">
           <Grid item>
-            <Typography variant="h5">User Login</Typography>
+            <Typography variant="h5">User's Login History</Typography>
           </Grid>
           <Grid item />
         </Grid>

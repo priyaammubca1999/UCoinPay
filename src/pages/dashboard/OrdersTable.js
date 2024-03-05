@@ -70,7 +70,7 @@ const headCells = [
   },
   {
     id: 'verifiedStatus',
-    align: 'right',
+    align: 'left',
     disablePadding: false,
     label: 'Verified Status'
   },
